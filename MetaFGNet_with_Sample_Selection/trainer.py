@@ -2,7 +2,6 @@ import time
 import torch
 import os
 import copy
-import ipdb
 
 
 def train(train_loader_source, train_loader_source_batch, train_loader_target, train_loader_target_batch, model_source, model_target, criterion, optimizer, epoch, args, meta_train_lr):
@@ -29,7 +28,7 @@ def train(train_loader_source, train_loader_source_batch, train_loader_target, t
         except StopIteration:
             train_loader_source_batch = enumerate(train_loader_source)
             (input_source, target_source) = train_loader_source_batch.__next__()[1]
-        target_source = target_source.cuda(async=True)
+        target_source = target_source.cuda(non_blocking=True)
         input_source_var = torch.autograd.Variable(input_source)
         target_source_var = torch.autograd.Variable(target_source)
 
@@ -51,10 +50,10 @@ def train(train_loader_source, train_loader_source_batch, train_loader_target, t
         (input_target_mtrain, target_target_mtrain) = temp_mtrain[1]
 
     data_time.update(time.time() - end)
-    target_target_train = target_target_train.cuda(async=True)
+    target_target_train = target_target_train.cuda(non_blocking=True)
     input_target_train_var = torch.autograd.Variable(input_target_train)
     target_target_train_var = torch.autograd.Variable(target_target_train)
-    target_target_mtrain = target_target_mtrain.cuda(async=True)
+    target_target_mtrain = target_target_mtrain.cuda(non_blocking=True)
     input_target_mtrain_var = torch.autograd.Variable(input_target_mtrain)
     target_target_mtrain_var = torch.autograd.Variable(target_target_mtrain)
 
@@ -156,7 +155,7 @@ def train(train_loader_source, train_loader_source_batch, train_loader_target, t
     # calculate for the target data#####################################################
     # mesure accuracy and record loss
     prec1, prec5 = accuracy(output_target.data, target_target_mtrain, topk=(1, 5))
-    losses_target.update(loss_target.data[0], input_target_mtrain.size(0))
+    losses_target.update(loss_target.item(), input_target_mtrain.size(0))
     top1_target.update(prec1[0], input_target_mtrain.size(0))
     top5_target.update(prec5[0], input_target_mtrain.size(0))
 
@@ -173,15 +172,15 @@ def train(train_loader_source, train_loader_source_batch, train_loader_target, t
         grad_for_source = temp_grad
     
         prec1, prec5 = accuracy(output_source.data, target_source, topk=(1, 5))
-        losses_source.update(loss_source.data[0], input_source.size(0))
+        losses_source.update(loss_source.item(), input_source.size(0))
         top1_source.update(prec1[0], input_source.size(0))
         top5_source.update(prec5[0], input_source.size(0))
 
         real_loss = loss_target + loss_source  # for different weight on the loss target
-        losses_real.update(real_loss.data[0], input_source.size(0) + input_target_mtrain.size(0))   # here the index for the loss is  input_source.size(0), may be not properly.
+        losses_real.update(real_loss.item(), input_source.size(0) + input_target_mtrain.size(0))   # here the index for the loss is  input_source.size(0), may be not properly.
     else:
         real_loss = loss_target
-        losses_real.update(real_loss.data[0], input_target_mtrain.size(0))
+        losses_real.update(real_loss.item(), input_target_mtrain.size(0))
 
     output_target_temp = model_target(input_target_mtrain_var)
     loss_target_temp = criterion(output_target_temp, target_target_mtrain_var)
@@ -318,14 +317,14 @@ def validate(val_loader_source, val_loader_target, model_source, model_target, c
     if val_loader_source:
         for i, (input_source, target_source) in enumerate(val_loader_source):  # the iterarion in the source dataset.
             data_time.update(time.time() - end)
-            target_source = target_source.cuda(async=True)
+            target_source = target_source.cuda(non_blocking=True)
             input_var = torch.autograd.Variable(input_source, volatile=True)  # volatile is fast in the evaluate model.
             target_var_source = torch.autograd.Variable(target_source, volatile=True)
             output_source = model_source(input_var)
             # calculate for the source data #######################################################
             loss_source = criterion(output_source, target_var_source)
             prec1, prec5 = accuracy(output_source.data, target_source, topk=(1, 5))
-            losses_source.update(loss_source.data[0], input_source.size(0))
+            losses_source.update(loss_source.item(), input_source.size(0))
             top1_source.update(prec1[0], input_source.size(0))
             top5_source.update(prec5[0], input_source.size(0))
 
@@ -345,7 +344,7 @@ def validate(val_loader_source, val_loader_target, model_source, model_target, c
 
     for i, (input_target, target_target) in enumerate(val_loader_target):  # the iterarion in the source dataset.
         data_time.update(time.time() - end)
-        target_target = target_target.cuda(async=True)
+        target_target = target_target.cuda(non_blocking=True)
         input_var = torch.autograd.Variable(input_target, volatile=True)  # volatile is fast in the evaluate model.
         target_var_target = torch.autograd.Variable(target_target, volatile=True)
         output_target = model_target(input_var)
@@ -355,7 +354,7 @@ def validate(val_loader_source, val_loader_target, model_source, model_target, c
         loss_target = criterion(output_target, target_var_target)
         # #mesure accuracy and record loss
         prec1, prec5 = accuracy(output_target.data, target_target, topk=(1, 5))
-        losses_target.update(loss_target.data[0], input_target.size(0))
+        losses_target.update(loss_target.item(), input_target.size(0))
         top1_target.update(prec1[0], input_target.size(0))
         top5_target.update(prec5[0], input_target.size(0))
         batch_time.update(time.time() - end)

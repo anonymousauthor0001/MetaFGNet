@@ -3,7 +3,7 @@ import shutil
 import torch
 import torchvision.transforms as transforms
 #import torchvision.datasets as datasets
-from data.folder_new import ImageFolder_new
+from folder_new import ImageFolder_new
 
 def split_train_test_images(data_dir):
     #data_dir = '/home/lab-zhangyabin/project/fine-grained/CUB_200_2011/'
@@ -58,6 +58,9 @@ def generate_dataloader(args):
     elif args.dataset == 'l-bird':
         traindir = os.path.join(args.data_path, 'L-Bird-Subset')  #L-Bird-Whole-Condensed
         valdir = os.path.join(args.data_path, 'L-Bird-Subset-val')
+    elif args.dataset == 'dongniao':
+        traindir = os.path.join(args.data_path, 'dongniao-train')  #L-Bird-Whole-Condensed
+        valdir = os.path.join(args.data_path, 'dongniao-val')
     else:
         raise ValueError ('the require dataset is not exist', args.dataset)
     if not os.path.isdir(traindir):
